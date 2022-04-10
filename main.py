@@ -10,6 +10,20 @@ window = pygame.display.set_mode((WIDTH, HEIGHT)) #создание окна
 clock = pygame.time.Clock() #контроль  кол-ва кадров в сек
 
 fontUI = pygame.font.Font(None, 30) #шрифт
+imgBrick = pygame.image.load('image/block_brick.png') #картинка блока
+imgTanks = [pygame.image.load('image/tank1.png'),
+            pygame.image.load('image/tank2.png'),
+            pygame.image.load('image/tank3.png'),
+            pygame.image.load('image/tank4.png'),
+            pygame.image.load('image/tank5.png'),
+            pygame.image.load('image/tank6.png'),
+            pygame.image.load('image/tank7.png'),
+            pygame.image.load('image/tank8.png')] #картинка танка
+
+imgBangs = [pygame.image.load('image/bang1.png'),
+            pygame.image.load('image/bang2.png'),
+            pygame.image.load('image/bang3.png')] #картинка взыва
+
 
 DIRECTS = [[0, -1], [1, 0], [0, 1], [-1, 0]]  #направление х,у
 
@@ -53,7 +67,15 @@ class Tank:
         self.keyDOWN = keyList[3]
         self.keySHOT = keyList[4]
 
+        self.rank = 0 #ранг танка
+        self.image = pygame.transform.rotate(imgTanks[self.rank], -self.direct*90) #поворот картинки в нужное напавление
+        self.rect = self.image.get_rect(center = self.rect.center)
+
     def update(self):
+        self.image = pygame.transform.rotate(imgTanks[self.rank], -self.direct * 90)
+        self.image = pygame.transform.scale(self.image, (self.image.get_width() - 5, self.image.get_height()-5)) #меньшаем размер танка, что бы он пролез
+        self.rect = self.image.get_rect(center=self.rect.center)
+
         oldX, oldY = self.rect.topleft #сохранение старых позиций
         if keys[self.keyLEFT]: #движение танка
             self.rect.x -= self.moveSpeed
@@ -69,7 +91,7 @@ class Tank:
             self.direct = 2 #направление 0,1
 
         for obj in objects: #столконовение с блоками
-            if obj != self and self.rect.colliderect(obj.rect):
+            if obj != self and obj.type == 'block' and  self.rect.colliderect(obj.rect):
                 self.rect.topleft = oldX, oldY
 
 
@@ -82,11 +104,14 @@ class Tank:
         if self.shotTimer > 0: self.shotTimer -= 1
 
     def draw(self):
+
         pygame.draw.rect(window, self.color, self.rect)
 
-        x = self.rect.centerx + DIRECTS[self.direct][0] * 30 #дуло
-        y = self.rect.centery + DIRECTS[self.direct][1] * 30
-        pygame.draw.line(window, 'white', self.rect.center, (x, y), 4) #рисуем дуло
+        #x = self.rect.centerx + DIRECTS[self.direct][0] * 30 #дуло
+        #y = self.rect.centery + DIRECTS[self.direct][1] * 30
+        #pygame.draw.line(window, 'white', self.rect.center, (x, y), 4) #рисуем дуло
+
+        window.blit(self.image, self.rect)
 
     def damage(self, value):
         self.hp -= value
@@ -111,15 +136,35 @@ class Bullet:
             bullets.remove(self) #пуля удаляется, если вылетит за поле
         else:
             for obj in objects: # если сталкивается с объектом
-                if obj != self.parent and obj.rect.collidepoint(self.px, self.py):
+                if obj != self.parent  and obj.rect.collidepoint(self.px, self.py):
                     obj.damage(self.damage)
                     bullets.remove(self)
+                    Bang(self.px, self.py)
                     break
 
     def draw(self):
         pygame.draw.circle(window, 'yellow', (self.px, self.py), 2) #пуля
 
+class Bang:
+    def __init__(self, px, py):
+        objects.append(self)
+        self.type = 'bang'
+
+        self.px, self.py = px, py
+        self.frame = 0 #номер кадра
+
+    def update(self):
+        self.frame += 0.2 #обновление кадров взрыва
+        if self.frame >= 3: objects.remove(self)
+
+
+    def draw(self):
+        image = imgBangs[int(self.frame)]
+        rect = image.get_rect(center = (self.px, self.py))
+        window.blit(image, rect)
+
 class Block:
+
     def __init__(self, px, py, size):
         objects.append(self)
         self.type = 'blocks'
@@ -131,8 +176,9 @@ class Block:
         pass
 
     def draw(self):
-        pygame.draw.rect(window, 'green', self.rect)
-        pygame.draw.rect(window, 'gray20', self.rect, 2) #обводка блоков
+        window.blit(imgBrick, self.rect)
+        #pygame.draw.rect(window, 'green', self.rect)
+        #pygame.draw.rect(window, 'gray20', self.rect, 2) #обводка блоков
 
     def damage(self, value):
         self.hp -= value
