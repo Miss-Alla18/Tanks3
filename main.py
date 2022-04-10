@@ -1,5 +1,5 @@
 import pygame
-
+from random import randint
 pygame.init()
 
 WIDTH, HEIGHT = 800, 600
@@ -35,6 +35,7 @@ class Tank:
         self.keySHOT = keyList[4]
 
     def update(self):
+        oldX, oldY = self.rect.topleft #сохранение старых позиций
         if keys[self.keyLEFT]: #движение танка
             self.rect.x -= self.moveSpeed
             self.direct = 3 #направление -1,0
@@ -48,7 +49,12 @@ class Tank:
             self.rect.y += self.moveSpeed
             self.direct = 2 #направление 0,1
 
-        if keys[self.keySHOT] and self.shotTimer == 0:
+        for obj in objects: #столконовение с блоками
+            if obj != self and self.rect.colliderect(obj.rect):
+                self.rect.topleft = oldX, oldY
+
+
+        if keys[self.keySHOT] and self.shotTimer == 0: #стрельба
             dx = DIRECTS[self.direct][0] * self.bulletSpeed
             dy = DIRECTS[self.direct][1] * self.bulletSpeed
             Bullet(self, self.rect.centerx, self.rect.centery, dx, dy, self.bulletDamage)
@@ -94,11 +100,43 @@ class Bullet:
     def draw(self):
         pygame.draw.circle(window, 'yellow', (self.px, self.py), 2) #пуля
 
+class Block:
+    def __init__(self, px, py, size):
+        objects.append(self)
+        self.type = 'blocks'
+
+        self.rect = pygame.Rect(px, py, size, size) #за столкновение
+        self.hp = 1
+
+    def update(self):
+        pass
+
+    def draw(self):
+        pygame.draw.rect(window, 'green', self.rect)
+        pygame.draw.rect(window, 'gray20', self.rect, 2) #обводка блоков
+
+    def damage(self, value):
+        self.hp -= value
+        if self.hp <= 0: objects.remove(self)
 
 bullets = []
 objects = [] #в списке будут храниться все объекты
 Tank('blue', 100, 275, 0, (pygame.K_a, pygame.K_d, pygame.K_w, pygame.K_s, pygame.K_SPACE))
-Tank('red', 650, 275, 0, (pygame.K_LEFT, pygame.K_RIGHT, pygame.K_UP, pygame.K_DOWN, pygame.K_KP_ENTER))
+Tank('red', 650, 275, 0, (pygame.K_LEFT, pygame.K_RIGHT, pygame.K_UP, pygame.K_DOWN, pygame.K_o))
+
+for _ in range(150): #генерация блоков
+    while True:
+        x = randint(0, WIDTH // TILE - 1) * TILE #позиция строго вровнена по сетке
+        y = randint(0, HEIGHT // TILE - 1) * TILE
+        rect = pygame.Rect(x, y, TILE, TILE) #не сталкиваетлся ли наш блок с другими объектами
+        fined = False
+        for obj in objects:
+            if rect.colliderect(obj.rect): fined = True #нашли столкновение
+
+        if not fined: break
+
+    Block(x, y, TILE)
+
 
 play = True
 while play: #обработчик событий
