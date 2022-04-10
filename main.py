@@ -9,7 +9,26 @@ TILE = 32 #у нас квадратные картинки 32на32
 window = pygame.display.set_mode((WIDTH, HEIGHT)) #создание окна
 clock = pygame.time.Clock() #контроль  кол-ва кадров в сек
 
+fontUI = pygame.font.Font(None, 30) #шрифт
+
 DIRECTS = [[0, -1], [1, 0], [0, 1], [-1, 0]]  #направление х,у
+
+class UI:
+    def __init__(self):
+        pass
+
+    def update(self):
+        pass
+
+    def draw(self): #отрисовка жизней
+        i = 0
+        for obj in objects:
+            if obj.type == 'tank':
+                pygame.draw.rect(window, obj.color, (5+i*70, 5, 22, 22))
+                text = fontUI.render(str(obj.hp), 1, obj.color)
+                rect = text.get_rect(center = (5+i*70+32, 5 + 11))
+                window.blit(text, rect)
+                i += 1
 
 
 class Tank:
@@ -123,11 +142,12 @@ bullets = []
 objects = [] #в списке будут храниться все объекты
 Tank('blue', 100, 275, 0, (pygame.K_a, pygame.K_d, pygame.K_w, pygame.K_s, pygame.K_SPACE))
 Tank('red', 650, 275, 0, (pygame.K_LEFT, pygame.K_RIGHT, pygame.K_UP, pygame.K_DOWN, pygame.K_o))
+ui = UI()
 
 for _ in range(150): #генерация блоков
     while True:
         x = randint(0, WIDTH // TILE - 1) * TILE #позиция строго вровнена по сетке
-        y = randint(0, HEIGHT // TILE - 1) * TILE
+        y = randint(1, HEIGHT // TILE - 1) * TILE
         rect = pygame.Rect(x, y, TILE, TILE) #не сталкиваетлся ли наш блок с другими объектами
         fined = False
         for obj in objects:
@@ -149,10 +169,12 @@ while play: #обработчик событий
 
     for bullet in bullets: bullet.update()
     for obj in objects: obj.update()
+    ui.update()
 
     window.fill('black')
     for bullet in bullets: bullet.draw()
     for obj in objects: obj.draw()
+    ui.draw()
 
     pygame.display.update()
     clock.tick(FPS)  #контролирование ФПС
