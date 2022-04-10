@@ -91,9 +91,9 @@ class Tank:
             self.direct = 2 #направление 0,1
 
         for obj in objects: #столконовение с блоками
-            if obj != self and obj.type == 'block' and  self.rect.colliderect(obj.rect):
+            if obj != self and self.rect.colliderect(obj.rect):
                 self.rect.topleft = oldX, oldY
-
+        #obj.type == 'block'
 
         if keys[self.keySHOT] and self.shotTimer == 0: #стрельба
             dx = DIRECTS[self.direct][0] * self.bulletSpeed
