@@ -3,6 +3,11 @@ from random import randint
 
 pygame.init()
 
+pygame.mixer.music.load("sounds/164b99c10472d02.mp3")
+pygame.mixer.music.play(-1) #бесконечная музыка
+b = pygame.mixer.Sound("sounds/bonus-ogg.ogg")
+d = pygame.mixer.Sound("sounds/battle-ogg.ogg")
+
 WIDTH, HEIGHT = 800, 600
 FPS = 60 #КОНТРОЛЬ КАДРОВ ВЫВОДИМЫХ В СЕКУНДУ
 TILE = 32  #у нас квадратные картинки 32на32
@@ -12,6 +17,7 @@ clock = pygame.time.Clock() #контроль  кол-ва кадров в се�
 
 fontUI = pygame.font.Font(None, 30) #шрифт
 
+imgBonusHp = pygame.image.load('images/bonus_star.png')
 imgBrick = pygame.image.load('images/block_brick.png') #картинка блока
 imgTanks = [
     pygame.image.load('images/tank1.png'),
@@ -100,6 +106,13 @@ class Tank:
             if obj != self and obj.type == 'block' and self.rect.colliderect(obj.rect):
                 self.rect.topleft = oldX, oldY
 
+        #for obj in objects: #столконовение с блоками
+            if obj != self and obj.type == 'bonus' and self.rect.colliderect(obj.rect):
+                self.hp += 1
+
+
+
+
         if keys[self.keySHOT] and self.shotTimer == 0: #стрельба
             dx = DIRECTS[self.direct][0] * self.bulletSpeed
             dy = DIRECTS[self.direct][1] * self.bulletSpeed
@@ -118,6 +131,23 @@ class Tank:
             objects.remove(self)
             print(self.color, 'dead')
 
+class BonusHP:
+    def __init__(self, px, py, size):
+        objects.append(self)
+        self.type = 'bonus'
+
+        self.rect = pygame.Rect(px, py, size, size)  # за столкновение
+        self.hp = 1
+
+    def update(self):
+        pass
+
+    def draw(self):
+        window.blit(imgBonusHp, self.rect)
+
+    def damage(self, value):
+        self.hp -= value
+        if self.hp <= 0: objects.remove(self)
 
 class Bullet:
     def __init__(self, parent, px, py, dx, dy, damage):
@@ -139,6 +169,7 @@ class Bullet:
                     obj.damage(self.damage)
                     bullets.remove(self)
                     Bang(self.px, self.py)
+                    d.play()
                     break
 
     def draw(self):
@@ -200,6 +231,19 @@ for _ in range(150): #генерация блоков
         if not fined: break
 
     Block(x, y, TILE)
+
+for f in range(5): #генерация бонусов
+    while True:
+        x = randint(0, WIDTH // TILE - 1) * TILE #позиция строго вровнена по сетке
+        y = randint(1, HEIGHT // TILE - 1) * TILE
+        rect = pygame.Rect(x, y, TILE, TILE) #не сталкиваетлся ли наш блок с другими объектами
+        fined = False
+        for obj in objects:
+            if rect.colliderect(obj.rect): fined = True #нашли столкновение
+
+        if not fined: break
+
+    BonusHP(x, y, TILE)
 
 play = True
 while play: #обработчик событий
