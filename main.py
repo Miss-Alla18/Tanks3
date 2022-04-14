@@ -1,24 +1,27 @@
+from datetime import datetime
 import pygame
 from random import randint
+import datetime
 
 pygame.init()
 
 pygame.mixer.music.load("sounds/164b99c10472d02.mp3")
-pygame.mixer.music.play(-1) #бесконечная музыка
+pygame.mixer.music.play(-1)  # бесконечная музыка
 b = pygame.mixer.Sound("sounds/bonus-ogg.ogg")
 d = pygame.mixer.Sound("sounds/battle-ogg.ogg")
 
 WIDTH, HEIGHT = 800, 600
-FPS = 60 #КОНТРОЛЬ КАДРОВ ВЫВОДИМЫХ В СЕКУНДУ
-TILE = 32  #у нас квадратные картинки 32на32
+FPS = 60  # КОНТРОЛЬ КАДРОВ ВЫВОДИМЫХ В СЕКУНДУ
+TILE = 32  # у нас квадратные картинки 32на32
 
-window = pygame.display.set_mode((WIDTH, HEIGHT)) #создание окна
-clock = pygame.time.Clock() #контроль  кол-ва кадров в сек
+window = pygame.display.set_mode((WIDTH, HEIGHT))  # создание окна
+clock = pygame.time.Clock()  # контроль  кол-ва кадров в сек
 
-fontUI = pygame.font.Font(None, 30) #шрифт
+fontUI = pygame.font.Font(None, 30)  # шрифт
 
 imgBonusHp = pygame.image.load('images/bonus_star.png')
-imgBrick = pygame.image.load('images/block_brick.png') #картинка блока
+imgBonusSpeed = pygame.image.load('images/bonus_tank.png')
+imgBrick = pygame.image.load('images/block_brick.png')  # картинка блока
 imgTanks = [
     pygame.image.load('images/tank1.png'),
     pygame.image.load('images/tank2.png'),
@@ -27,15 +30,15 @@ imgTanks = [
     pygame.image.load('images/tank5.png'),
     pygame.image.load('images/tank6.png'),
     pygame.image.load('images/tank7.png'),
-    pygame.image.load('images/tank8.png'), #картинка танка
+    pygame.image.load('images/tank8.png'),  # картинка танка
 ]
 imgBangs = [
     pygame.image.load('images/bang1.png'),
     pygame.image.load('images/bang2.png'),
-    pygame.image.load('images/bang3.png'), #картинка взыва
+    pygame.image.load('images/bang3.png'),  # картинка взыва
 ]
 
-DIRECTS = [[0, -1], [1, 0], [0, 1], [-1, 0]] #направление х,у
+DIRECTS = [[0, -1], [1, 0], [0, 1], [-1, 0]]  # направление х,у
 
 
 class UI:
@@ -45,7 +48,7 @@ class UI:
     def update(self):
         pass
 
-    def draw(self): #отрисовка жизней
+    def draw(self):  # отрисовка жизней
         i = 0
         for obj in objects:
             if obj.type == 'tank':
@@ -59,17 +62,20 @@ class UI:
 
 class Tank:
     def __init__(self, color, px, py, direct, keyList):
-        objects.append(self) #добавляет себя в объекты
+        objects.append(self)  # добавляет себя в объекты
         self.type = 'tank'
 
         self.color = color
         self.rect = pygame.Rect(px, py, TILE, TILE)
-        self.direct = direct #направление
-        self.moveSpeed = 2 #скорость движения данных
+        self.direct = direct  # направление
+        self.moveSpeed = 2  # скорость движения данных
         self.hp = 5
 
-        self.shotTimer = 0 #таймер выстрела
-        self.shotDelay = 60 #задержка, тк ФПС = 60
+        self.time_set = datetime.datetime.now()
+        self.flag_bonus_speed = False
+
+        self.shotTimer = 0  # таймер выстрела
+        self.shotDelay = 60  # задержка, тк ФПС = 60
         self.bulletSpeed = 5
         self.bulletDamage = 1
 
@@ -79,41 +85,52 @@ class Tank:
         self.keyDOWN = keyList[3]
         self.keySHOT = keyList[4]
 
-        self.rank = 0 #ранг танка
-        self.image = pygame.transform.rotate(imgTanks[self.rank], -self.direct * 90) #поворот картинки в нужное напавление
+        self.rank = 0  # ранг танка
+        self.image = pygame.transform.rotate(imgTanks[self.rank],
+                                             -self.direct * 90)  # поворот картинки в нужное напавление
         self.rect = self.image.get_rect(center=self.rect.center)
 
     def update(self):
         self.image = pygame.transform.rotate(imgTanks[self.rank], -self.direct * 90)
-        self.image = pygame.transform.scale(self.image, (self.image.get_width() - 5, self.image.get_height() - 5)) #меньшаем размер танка, что бы он пролез
+        self.image = pygame.transform.scale(self.image, (
+        self.image.get_width() - 5, self.image.get_height() - 5))  # меньшаем размер танка, что бы он пролез
         self.rect = self.image.get_rect(center=self.rect.center)
 
-        oldX, oldY = self.rect.topleft #сохранение старых позиций
-        if keys[self.keyLEFT]: #движение танка
+        oldX, oldY = self.rect.topleft  # сохранение старых позиций
+        if keys[self.keyLEFT]:  # движение танка
             self.rect.x -= self.moveSpeed
-            self.direct = 3 #направление -1,0
+            self.direct = 3  # направление -1,0
         elif keys[self.keyRIGHT]:
             self.rect.x += self.moveSpeed
-            self.direct = 1 # направление 1,0
+            self.direct = 1  # направление 1,0
         elif keys[self.keyUP]:
             self.rect.y -= self.moveSpeed
-            self.direct = 0 # направление 0,-1
+            self.direct = 0  # направление 0,-1
         elif keys[self.keyDOWN]:
             self.rect.y += self.moveSpeed
-            self.direct = 2 #направление 0,1
+            self.direct = 2  # направление 0,1
 
-        for obj in objects: #столконовение с блоками
+        for obj in objects:  # столконовение с блоками
             if obj != self and obj.type == 'block' and self.rect.colliderect(obj.rect):
                 self.rect.topleft = oldX, oldY
 
-        #for obj in objects: #столконовение с блоками
-            if obj != self and obj.type == 'bonus' and self.rect.colliderect(obj.rect):
+        for obj in objects:  # столконовение с блоками
+            if obj != self and obj.type == 'bonusHP' and self.rect.colliderect(obj.rect):
                 self.hp += 1
+                obj.destroy()
 
+            if obj != self and obj.type == 'bonusSpeed' and self.rect.colliderect(obj.rect):
+                self.time_set = datetime.datetime.now()
+                self.moveSpeed *= 2
+                self.flag_bonus_speed = True
+                obj.destroy()
 
+        if (int((datetime.datetime.now() - self.time_set).total_seconds()) >= 2 and
+                self.flag_bonus_speed == True):
+            self.moveSpeed /= 2
+            self.flag_bonus_speed = False
 
-
-        if keys[self.keySHOT] and self.shotTimer == 0: #стрельба
+        if keys[self.keySHOT] and self.shotTimer == 0:  # стрельба
             dx = DIRECTS[self.direct][0] * self.bulletSpeed
             dy = DIRECTS[self.direct][1] * self.bulletSpeed
             Bullet(self, self.rect.centerx, self.rect.centery, dx, dy, self.bulletDamage)
@@ -131,10 +148,11 @@ class Tank:
             objects.remove(self)
             print(self.color, 'dead')
 
+
 class BonusHP:
     def __init__(self, px, py, size):
         objects.append(self)
-        self.type = 'bonus'
+        self.type = 'bonusHP'
 
         self.rect = pygame.Rect(px, py, size, size)  # за столкновение
         self.hp = 1
@@ -145,9 +163,35 @@ class BonusHP:
     def draw(self):
         window.blit(imgBonusHp, self.rect)
 
+    def destroy(self):
+        objects.remove(self)
+
     def damage(self, value):
         self.hp -= value
         if self.hp <= 0: objects.remove(self)
+
+
+class BonusSpeed:
+    def __init__(self, px, py, size):
+        objects.append(self)
+        self.type = 'bonusSpeed'
+
+        self.rect = pygame.Rect(px, py, size, size)  # за столкновение
+        self.hp = 1
+
+    def update(self):
+        pass
+
+    def draw(self):
+        window.blit(imgBonusSpeed, self.rect)
+
+    def destroy(self):
+        objects.remove(self)
+
+    def damage(self, value):
+        self.hp -= value
+        if self.hp <= 0: objects.remove(self)
+
 
 class Bullet:
     def __init__(self, parent, px, py, dx, dy, damage):
@@ -162,7 +206,7 @@ class Bullet:
         self.py += self.dy
 
         if self.px < 0 or self.px > WIDTH or self.py < 0 or self.py > HEIGHT:
-            bullets.remove(self) #пуля удаляется, если вылетит за поле
+            bullets.remove(self)  # пуля удаляется, если вылетит за поле
         else:
             for obj in objects:  # если сталкивается с объектом
                 if obj != self.parent and obj.type != 'bang' and obj.rect.collidepoint(self.px, self.py):
@@ -182,10 +226,10 @@ class Bang:
         self.type = 'bang'
 
         self.px, self.py = px, py
-        self.frame = 0 #номер кадра
+        self.frame = 0  # номер кадра
 
     def update(self):
-        self.frame += 0.2 #обновление кадров взрыва
+        self.frame += 0.2  # обновление кадров взрыва
         if self.frame >= 3: objects.remove(self)
 
     def draw(self):
@@ -199,7 +243,7 @@ class Block:
         objects.append(self)
         self.type = 'block'
 
-        self.rect = pygame.Rect(px, py, size, size) #за столкновение
+        self.rect = pygame.Rect(px, py, size, size)  # за столкновение
         self.hp = 1
 
     def update(self):
@@ -214,41 +258,44 @@ class Block:
 
 
 bullets = []
-objects = [] #в списке будут храниться все объекты
+objects = []  # в списке будут храниться все объекты
 Tank('blue', 100, 275, 0, (pygame.K_a, pygame.K_d, pygame.K_w, pygame.K_s, pygame.K_SPACE))
 Tank('red', 650, 275, 0, (pygame.K_LEFT, pygame.K_RIGHT, pygame.K_UP, pygame.K_DOWN, pygame.K_o))
 ui = UI()
 
-for _ in range(150): #генерация блоков
+for _ in range(150):  # генерация блоков
     while True:
-        x = randint(0, WIDTH // TILE - 1) * TILE #позиция строго вровнена по сетке
+        x = randint(0, WIDTH // TILE - 1) * TILE  # позиция строго вровнена по сетке
         y = randint(1, HEIGHT // TILE - 1) * TILE
-        rect = pygame.Rect(x, y, TILE, TILE) #не сталкиваетлся ли наш блок с другими объектами
+        rect = pygame.Rect(x, y, TILE, TILE)  # не сталкиваетлся ли наш блок с другими объектами
         fined = False
         for obj in objects:
-            if rect.colliderect(obj.rect): fined = True #нашли столкновение
+            if rect.colliderect(obj.rect): fined = True  # нашли столкновение
 
         if not fined: break
 
     Block(x, y, TILE)
 
-for f in range(5): #генерация бонусов
+for f in range(5):  # генерация бонусов
     while True:
-        x = randint(0, WIDTH // TILE - 1) * TILE #позиция строго вровнена по сетке
+        x = randint(0, WIDTH // TILE - 1) * TILE  # позиция строго вровнена по сетке
         y = randint(1, HEIGHT // TILE - 1) * TILE
-        rect = pygame.Rect(x, y, TILE, TILE) #не сталкиваетлся ли наш блок с другими объектами
+        rect = pygame.Rect(x, y, TILE, TILE)  # не сталкиваетлся ли наш блок с другими объектами
         fined = False
         for obj in objects:
-            if rect.colliderect(obj.rect): fined = True #нашли столкновение
+            if rect.colliderect(obj.rect): fined = True  # нашли столкновение
 
         if not fined: break
 
-    BonusHP(x, y, TILE)
+    if randint(0, 1) == 0:
+        BonusHP(x, y, TILE)
+    else:
+        BonusSpeed(x, y, TILE)
 
 play = True
-while play: #обработчик событий
-    for event in pygame.event.get(): #возвращает все события, которые произошли
-        if event.type == pygame.QUIT: #означает, что пользователь закрыл
+while play:  # обработчик событий
+    for event in pygame.event.get():  # возвращает все события, которые произошли
+        if event.type == pygame.QUIT:  # означает, что пользователь закрыл
             play = False
     # перехватывание состояния кнопок перед обновлением
     keys = pygame.key.get_pressed()
@@ -263,6 +310,6 @@ while play: #обработчик событий
     ui.draw()
 
     pygame.display.update()
-    clock.tick(FPS) #контролирование ФПС
+    clock.tick(FPS)  # контролирование ФПС
 
 pygame.quit()
